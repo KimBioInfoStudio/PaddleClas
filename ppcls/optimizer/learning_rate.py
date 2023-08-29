@@ -255,7 +255,7 @@ class Cosine(LRBase):
 
 class Cyclic(LRBase):
     """Cyclic learning rate decay
-    
+
     Args:
         epochs (int): Total epoch(s).
         step_each_epoch (int): Number of iterations within an epoch.
@@ -403,10 +403,29 @@ class Piecewise(LRBase):
                  warmup_start_lr=0.0,
                  last_epoch=-1,
                  by_epoch=False,
+                 learning_rate=None,
                  **kwargs):
+        if learning_rate:
+            decay_epochs = list(range(0, epochs, 30))
+            values = [
+                learning_rate * (0.1**i) for i in range(len(decay_epochs))
+            ]
+            # when total epochs < 30, decay_epochs and values should be
+            # [] and [lr] respectively, but paddle dont support.
+            if len(decay_epochs) == 1:
+                decay_epochs = [epochs]
+                values = [values[0], values[0]]
+            else:
+                decay_epochs = decay_epochs[1:]
+            logger.warning(
+                "When 'learning_rate' of Piecewise has beed set, "
+                "the learning rate scheduler would be set by the rule that lr decay 10 times every 30 epochs. "
+                f"So, the 'decay_epochs' and 'values' have been set to {decay_epochs} and {values} respectively."
+            )
         super(Piecewise,
               self).__init__(epochs, step_each_epoch, values[0], warmup_epoch,
                              warmup_start_lr, last_epoch, by_epoch)
+
         self.values = values
         self.boundaries_steps = [e * step_each_epoch for e in decay_epochs]
         if self.by_epoch is True:
